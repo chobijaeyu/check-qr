@@ -12,6 +12,9 @@ check qr if in order
 
 Features
 --------
+1.keep your csv 'qr' on last columns
+2.read csv file only once when you first.
+
 
 * TODO
 

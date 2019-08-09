@@ -3,52 +3,54 @@ import sys
 import pkg_resources
 
 from PyQt5.QtCore import Qt, pyqtSlot
-from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (QAction, QApplication, QDesktopWidget, QDialog, QFileDialog,
-                             QHBoxLayout, QLabel, QMainWindow, QToolBar, QVBoxLayout, QWidget,
-                             QLineEdit, QPushButton, QMessageBox, QTableWidget, QHBoxLayout,
-                             QTabWidget, QSizePolicy, QTextEdit, QGridLayout,QTableView)
-from PyQt5.QtSql import QSqlDatabase,QSqlTableModel
+                             QLabel, QMainWindow, QToolBar, QVBoxLayout, QWidget,
+                             QLineEdit, QPlainTextEdit,
+                             QTabWidget, QSizePolicy, QGridLayout, QTableView)
+from PyQt5.QtSql import QSqlDatabase, QSqlTableModel
 
 import pandas as pd
-import sqlite3,csv
+import sqlite3, csv
 from os.path import exists
+
 
 class checkqr(QMainWindow):
     """Create the main window that stores all of the widgets necessary for the application."""
 
     def __init__(self, parent=None):
         """Initialize the components of the main window."""
+        self.conut = 1
         super(checkqr, self).__init__(parent)
-        self.resize(1024, 768)
+        self.resize(1800, 1024)
         self.setWindowTitle('checkqr')
         # window_icon = pkg_resources.resource_filename('checkqr.images',
         # 'ic_insert_drive_file_black_48dp_1x.png')
         # self.setWindowIcon(QIcon(window_icon))
-        
+
         widget = QWidget(self)
         # self.layout = QHBoxLayout(widget)
         self.open_file()
         self.menu_bar = self.menuBar()
         self.about_dialog = AboutDialog()
-        
+
         self.status_bar = self.statusBar()
         self.status_bar.showMessage('Ready', 5000)
-        
+
         self.file_menu()
         self.help_menu()
-        
+
         # self.tool_bar_items()
         self.input_area()
         self.table_area()
-
+        self.output_area()
 
         self.setCentralWidget(widget)
         mainLayout = QGridLayout()
         mainLayout.addWidget(self.bottomLeftTabWidget, 2, 0)
-        mainLayout.addWidget(self.textbox, 1, 0)
+        mainLayout.addWidget(self.inputqr, 1, 0)
+        mainLayout.addWidget(self.outputqr, 2, 1)
         widget.setLayout(mainLayout)
-        
+
     def file_menu(self):
         """Create a file submenu with an Open File item that opens a file dialog."""
         self.file_sub_menu = self.menu_bar.addMenu('&File')
@@ -101,34 +103,51 @@ class checkqr(QMainWindow):
                 fieldsName += f'{i} varchar,'
             fieldsName = fieldsName[:-1]
             print(fieldsName)
-            with open(filename) as f ,sqlite3.connect('tmp.db') as dbcon:
+            with open(filename) as f, sqlite3.connect('tmp.db') as dbcon:
                 reader = csv.reader(f)
-                self.c = dbcon.cursor()
-                self.c.execute(f"""CREATE TABLE IF NOT EXISTS checkdata({fieldsName})""")
-                for idx,field in enumerate(reader):
+                c = dbcon.cursor()
+                c.execute(f"""CREATE TABLE IF NOT EXISTS checkdata({fieldsName})""")
+                for idx, field in enumerate(reader):
                     if idx == 0:
+                        _columns = len(field) - 1
                         continue
-                    self.c.execute('insert into checkdata values (?,?)' , field)
+                    c.execute(f'insert into checkdata values ({"?,"*_columns}?)', field)
                 dbcon.commit()
 
     def input_area(self):
-        self.textbox=QLineEdit(self)
+        self.inputqr = QLineEdit(self)
         # self.textbox.move(30,30)
-        self.textbox.resize(280,40)
+        self.inputqr.resize(280, 40)
+        self.inputqr.returnPressed.connect(self.on_input)
         # self.button=QPushButton('Click me',self)
         # self.button.move(15,85)
         # self.button.clicked.connect(self.on_click)
-    
-    # @pyqtSlot()
-    # def on_click(self):
-    #         textboxValue=self.textbox.text()
-    #         QMessageBox.question(self, 'Hello, world!', "Confirm: "+textboxValue,                                                                            QMessageBox.Ok, QMessageBox.Ok)
-    #         self.textbox.setText("")
+
+    @pyqtSlot()
+    def on_input(self):
+        textboxValue = self.inputqr.text()
+        print(textboxValue)
+        self.outputqr.appendPlainText(f"{self.conut}番目-sacned-->{textboxValue}")
+        self.inputqr.setText("")
+        self.on_check(textboxValue)
+
+    def on_check(self,checktext):
+        with sqlite3.connect('tmp.db') as dbcon:
+            c = dbcon.cursor()
+            c.execute("select * from checkdata where rowid= ?", (str(self.conut),))
+            dbcon.commit()
+        res = c.fetchone()
+        print(res)
+        if res[-1] == checktext:
+            self.outputqr.appendPlainText(f"{self.conut}番目-checked-->{res}")
+            self.conut += 1
+        else:
+            self.outputqr.appendPlainText(f"{self.conut}番目-not found-->{res}")
 
     def table_area(self):
         self.bottomLeftTabWidget = QTabWidget()
         self.bottomLeftTabWidget.setSizePolicy(QSizePolicy.Preferred,
-                QSizePolicy.Ignored)
+                                               QSizePolicy.Ignored)
         # self.bottomLeftTabWidget.move(30,90)
         if not exists("tmp.db"):
             print("File tmp.db does not exist.")
@@ -144,35 +163,12 @@ class checkqr(QMainWindow):
         view = QTableView()
         view.setModel(model)
 
-        self.bottomLeftTabWidget.addTab(view,"table")
-        
+        self.bottomLeftTabWidget.addTab(view, "table")
 
-        # tab1 = QWidget()
-        # tableWidget = QTableWidget(self.data.shape[0] if self.data.empty else 1, self.data.shape[1] if self.data.empty else 1)
-        # tableWidget = QTableWidget(self.data.shape[0] , self.data.shape[1] )
+    def output_area(self):
+        self.outputqr = QPlainTextEdit()
+        self.outputqr.setFocusPolicy(Qt.NoFocus)
 
-        # tab1hbox = QHBoxLayout()
-        # tab1hbox.setContentsMargins(5, 5, 5, 5)
-        # tab1hbox.addWidget(tableWidget)
-        # tab1.setLayout(tab1hbox)
-
-        # tab2 = QWidget()
-        # textEdit = QTextEdit()
-
-        # textEdit.setPlainText("Twinkle, twinkle, little star,\n"
-        #                       "How I wonder what you are.\n" 
-        #                       "Up above the world so high,\n"
-        #                       "Like a diamond in the sky.\n"
-        #                       "Twinkle, twinkle, little star,\n" 
-        #                       "How I wonder what you are!\n")
-
-        # tab2hbox = QHBoxLayout()
-        # tab2hbox.setContentsMargins(5, 5, 5, 5)
-        # tab2hbox.addWidget(textEdit)
-        # tab2.setLayout(tab2hbox)
-
-        # self.bottomLeftTabWidget.addTab(tab1, "&Table")
-        # self.bottomLeftTabWidget.addTab(tab2, "Text &Edit")
 
 class AboutDialog(QDialog):
     """Create the necessary elements to show helpful text in a dialog."""
@@ -204,7 +200,6 @@ class AboutDialog(QDialog):
         self.setLayout(self.layout)
 
 
-
 def main():
     application = QApplication(sys.argv)
     window = checkqr()
@@ -214,6 +209,7 @@ def main():
     window.show()
     window.move(width, height)
     sys.exit(application.exec_())
+
 
 if __name__ == "__main__":
     main()
