@@ -3,10 +3,11 @@ import sys
 import pkg_resources
 
 from PyQt5.QtCore import Qt, pyqtSlot
+from PyQt5.QtGui import QIntValidator
 from PyQt5.QtWidgets import (QAction, QApplication, QDesktopWidget, QDialog, QFileDialog,
                              QLabel, QMainWindow, QToolBar, QVBoxLayout, QWidget,
                              QLineEdit, QPlainTextEdit,
-                             QTabWidget, QSizePolicy, QGridLayout, QTableView)
+                             QTabWidget, QSizePolicy, QGridLayout, QTableView, QGroupBox, QPushButton)
 from PyQt5.QtSql import QSqlDatabase, QSqlTableModel
 
 import pandas as pd
@@ -20,6 +21,7 @@ class checkqr(QMainWindow):
     def __init__(self, parent=None):
         """Initialize the components of the main window."""
         self.conut = 1
+        self.offset = 1
         super(checkqr, self).__init__(parent)
         self.resize(1800, 1024)
         self.setWindowTitle('checkqr')
@@ -42,10 +44,12 @@ class checkqr(QMainWindow):
         # self.tool_bar_items()
         self.input_area()
         self.table_area()
+        self.tool_area()
         self.output_area()
 
         self.setCentralWidget(widget)
         mainLayout = QGridLayout()
+        mainLayout.addWidget(self.topRightGroupBox, 1, 1)
         mainLayout.addWidget(self.bottomLeftTabWidget, 2, 0)
         mainLayout.addWidget(self.inputqr, 1, 0)
         mainLayout.addWidget(self.outputqr, 2, 1)
@@ -111,7 +115,7 @@ class checkqr(QMainWindow):
                     if idx == 0:
                         _columns = len(field) - 1
                         continue
-                    c.execute(f'insert into checkdata values ({"?,"*_columns}?)', field)
+                    c.execute(f'insert into checkdata values ({"?," * _columns}?)', field)
                 dbcon.commit()
 
     def input_area(self):
@@ -131,7 +135,7 @@ class checkqr(QMainWindow):
         self.inputqr.setText("")
         self.on_check(textboxValue)
 
-    def on_check(self,checktext):
+    def on_check(self, checktext):
         with sqlite3.connect('tmp.db') as dbcon:
             c = dbcon.cursor()
             c.execute("select * from checkdata where rowid= ?", (str(self.conut),))
@@ -140,7 +144,7 @@ class checkqr(QMainWindow):
         print(res)
         if res[-1] == checktext:
             self.outputqr.appendPlainText(f"{self.conut}番目-checked-->{res}")
-            self.conut += 1
+            self.conut += self.offset
         else:
             self.outputqr.appendPlainText(f"{self.conut}番目-not found-->{res}")
 
@@ -169,6 +173,43 @@ class checkqr(QMainWindow):
         self.outputqr = QPlainTextEdit()
         self.outputqr.setFocusPolicy(Qt.NoFocus)
 
+    def tool_area(self):
+        self.topRightGroupBox = QGroupBox("tool area")
+        self.offsetlabel = QLabel(f"offset setting, now offset is {self.offset}")
+
+        nextButton = QPushButton('next', self)
+        nextButton.clicked.connect(self.on_click_nextbutton)
+        resetButton = QPushButton('reset',self)
+        resetButton.clicked.connect(self.reset)
+        offsetinput = QLineEdit(self)
+        onlyInt = QIntValidator()
+        offsetinput.setValidator(onlyInt)
+        offsetinput.returnPressed.connect(lambda: self.on_offsetinput(offsetinput.text()))
+        layout = QVBoxLayout()
+        layout.addWidget(nextButton)
+        layout.addWidget(resetButton)
+        layout.addWidget(self.offsetlabel)
+        layout.addWidget(offsetinput)
+
+        self.topRightGroupBox.setLayout(layout)
+
+    @pyqtSlot()
+    def on_offsetinput(self, offset):
+        self.offset = int(offset)
+        self.offsetlabel.setText(f"offset setting, now offset is {self.offset}")
+
+    @pyqtSlot()
+    def on_click_nextbutton(self):
+        self.read_next()
+
+    def read_next(self):
+        self.conut += self.offset
+
+    def reset(self):
+        self.conut = 1
+        self.offset = 1
+        self.outputqr.setPlainText('')
+        self.offsetlabel.setText(f"offset setting, now offset is {self.offset}")
 
 class AboutDialog(QDialog):
     """Create the necessary elements to show helpful text in a dialog."""
