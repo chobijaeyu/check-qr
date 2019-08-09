@@ -11,7 +11,8 @@ from PyQt5.QtWidgets import (QAction, QApplication, QDesktopWidget, QDialog, QFi
 from PyQt5.QtSql import QSqlDatabase, QSqlTableModel
 
 import pandas as pd
-import sqlite3, csv
+import sqlite3
+import csv
 from os.path import exists
 
 
@@ -20,7 +21,7 @@ class checkqr(QMainWindow):
 
     def __init__(self, parent=None):
         """Initialize the components of the main window."""
-        self.conut = 1
+        self.count = 1
         self.offset = 1
         super(checkqr, self).__init__(parent)
         self.resize(1800, 1024)
@@ -31,7 +32,7 @@ class checkqr(QMainWindow):
 
         widget = QWidget(self)
         # self.layout = QHBoxLayout(widget)
-        self.open_file()
+        # self.open_file()
         self.menu_bar = self.menuBar()
         self.about_dialog = AboutDialog()
 
@@ -106,17 +107,19 @@ class checkqr(QMainWindow):
             for i in list(self.data):
                 fieldsName += f'{i} varchar,'
             fieldsName = fieldsName[:-1]
-            print(fieldsName)
             with open(filename) as f, sqlite3.connect('tmp.db') as dbcon:
                 reader = csv.reader(f)
                 c = dbcon.cursor()
-                c.execute(f"""CREATE TABLE IF NOT EXISTS checkdata({fieldsName})""")
+                c.execute(
+                    f"""CREATE TABLE IF NOT EXISTS checkdata({fieldsName})""")
                 for idx, field in enumerate(reader):
                     if idx == 0:
                         _columns = len(field) - 1
                         continue
-                    c.execute(f'insert into checkdata values ({"?," * _columns}?)', field)
+                    c.execute(
+                        f'insert into checkdata values ({"?," * _columns}?)', field)
                 dbcon.commit()
+        self.load_table()
 
     def input_area(self):
         self.inputqr = QLineEdit(self)
@@ -131,32 +134,35 @@ class checkqr(QMainWindow):
     def on_input(self):
         textboxValue = self.inputqr.text()
         print(textboxValue)
-        self.outputqr.appendPlainText(f"{self.conut}番目-sacned-->{textboxValue}")
+        self.outputqr.appendPlainText(
+            f"{self.count}番目-sacned-->{textboxValue}")
         self.inputqr.setText("")
         self.on_check(textboxValue)
 
     def on_check(self, checktext):
         with sqlite3.connect('tmp.db') as dbcon:
             c = dbcon.cursor()
-            c.execute("select * from checkdata where rowid= ?", (str(self.conut),))
+            c.execute("select * from checkdata where rowid= ?",
+                      (str(self.count),))
             dbcon.commit()
         res = c.fetchone()
         print(res)
         if res[-1] == checktext:
-            self.outputqr.appendPlainText(f"{self.conut}番目-checked-->{res}")
-            self.conut += self.offset
+            self.outputqr.appendPlainText(f"{self.count}番目-checked-->{res}")
+            self.count += self.offset
         else:
-            self.outputqr.appendPlainText(f"{self.conut}番目-not found-->{res}")
+            self.outputqr.appendPlainText(f"{self.count}番目-not found-->{res}")
 
     def table_area(self):
         self.bottomLeftTabWidget = QTabWidget()
+        self.view = QTableView()
         self.bottomLeftTabWidget.setSizePolicy(QSizePolicy.Preferred,
                                                QSizePolicy.Ignored)
-        # self.bottomLeftTabWidget.move(30,90)
-        if not exists("tmp.db"):
-            print("File tmp.db does not exist.")
-            sys.exit()
+        # if not exists("tmp.db"):
+        #     print("File tmp.db does not exist.")
+        self.load_table()
 
+    def load_table(self):
         db = QSqlDatabase.addDatabase("QSQLITE")
         db.setDatabaseName("tmp.db")
         db.open()
@@ -164,10 +170,8 @@ class checkqr(QMainWindow):
         model.setTable("checkdata")
         model.setEditStrategy(QSqlTableModel.OnFieldChange)
         model.select()
-        view = QTableView()
-        view.setModel(model)
-
-        self.bottomLeftTabWidget.addTab(view, "table")
+        self.view.setModel(model)
+        self.bottomLeftTabWidget.addTab(self.view, "table")
 
     def output_area(self):
         self.outputqr = QPlainTextEdit()
@@ -175,41 +179,55 @@ class checkqr(QMainWindow):
 
     def tool_area(self):
         self.topRightGroupBox = QGroupBox("tool area")
-        self.offsetlabel = QLabel(f"offset setting, now offset is {self.offset}")
-
+        self.offsetlabel = QLabel(
+            f"offset setting, now offset is {self.offset}")
+        self.countlabel = QLabel(f"setting your count,now is {self.count}")
+        onlyInt = QIntValidator()
+        countinput = QLineEdit(self)
+        countinput.setValidator(onlyInt)
+        countinput.returnPressed.connect(lambda: self.set_count(countinput.text()))
         nextButton = QPushButton('next', self)
         nextButton.clicked.connect(self.on_click_nextbutton)
-        resetButton = QPushButton('reset',self)
+        resetButton = QPushButton('reset', self)
         resetButton.clicked.connect(self.reset)
         offsetinput = QLineEdit(self)
-        onlyInt = QIntValidator()
         offsetinput.setValidator(onlyInt)
-        offsetinput.returnPressed.connect(lambda: self.on_offsetinput(offsetinput.text()))
+        offsetinput.returnPressed.connect(
+            lambda: self.on_offsetinput(offsetinput.text()))
         layout = QVBoxLayout()
         layout.addWidget(nextButton)
         layout.addWidget(resetButton)
         layout.addWidget(self.offsetlabel)
         layout.addWidget(offsetinput)
+        layout.addWidget(self.countlabel)
+        layout.addWidget(countinput)
 
         self.topRightGroupBox.setLayout(layout)
 
     @pyqtSlot()
     def on_offsetinput(self, offset):
         self.offset = int(offset)
-        self.offsetlabel.setText(f"offset setting, now offset is {self.offset}")
+        self.offsetlabel.setText(
+            f"offset setting, now offset is {self.offset}")
 
     @pyqtSlot()
     def on_click_nextbutton(self):
         self.read_next()
 
     def read_next(self):
-        self.conut += self.offset
+        self.count += self.offset
+
+    def set_count(self, count):
+        self.count = int(count)
+        self.countlabel.setText(f"setting where count from,now is from {self.count}")
 
     def reset(self):
-        self.conut = 1
+        self.count = 1
         self.offset = 1
         self.outputqr.setPlainText('')
-        self.offsetlabel.setText(f"offset setting, now offset is {self.offset}")
+        self.offsetlabel.setText(
+            f"offset setting, now offset is {self.offset}")
+
 
 class AboutDialog(QDialog):
     """Create the necessary elements to show helpful text in a dialog."""
@@ -225,9 +243,6 @@ class AboutDialog(QDialog):
         author = QLabel('yujun')
         author.setAlignment(Qt.AlignCenter)
 
-        icons = QLabel('Material design icons created by Google')
-        icons.setAlignment(Qt.AlignCenter)
-
         github = QLabel('GitHub: chobijaeyu')
         github.setAlignment(Qt.AlignCenter)
 
@@ -235,7 +250,6 @@ class AboutDialog(QDialog):
         self.layout.setAlignment(Qt.AlignVCenter)
 
         self.layout.addWidget(author)
-        self.layout.addWidget(icons)
         self.layout.addWidget(github)
 
         self.setLayout(self.layout)
