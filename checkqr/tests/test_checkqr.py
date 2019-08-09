@@ -6,7 +6,6 @@ from PyQt5.QtWidgets import QDialog, QFileDialog
 from checkqr import checkqr
 
 
-
 @pytest.fixture
 def window(qtbot):
     """Pass the application to the test functions via a pytest fixture."""
@@ -15,7 +14,7 @@ def window(qtbot):
     new_window.show()
     return new_window
 
-@pytest.fixture
+
 def test_window_title(window):
     """Check that the window title shows as declared."""
     print(window)
@@ -34,7 +33,7 @@ def test_open_file(window, qtbot, mocker):
     Qtbot clicks on the file sub menu and then navigates to the Open File item. Mock creates
     an object to be passed to the QFileDialog.
     """
-    qtbot.mouseClick(window.file_s768ub_menu, Qt.LeftButton)
+    qtbot.mouseClick(window.file_sub_menu, Qt.LeftButton)
     qtbot.keyClick(window.file_sub_menu, Qt.Key_Down)
     mocker.patch.object(QFileDialog, 'getOpenFileName', return_value=('', ''))
     qtbot.keyClick(window.file_sub_menu, Qt.Key_Enter)
@@ -51,5 +50,37 @@ def test_about_dialog(window, qtbot, mocker):
     mocker.patch.object(QDialog, 'exec_', return_value='accept')
     qtbot.keyClick(window.help_sub_menu, Qt.Key_Enter)
 
-if __name__ == "__main__":
-    test_window_title(window())
+
+def test_inputqr(window, qtbot, mocker):
+    qtbot.keyClicks(window.inputqr, "abc", )
+    qtbot.keyClick(window.inputqr, Qt.Key_Enter)
+    assert window.outputqr.toPlainText() != ""
+    
+def test_resetbutton(window,qtbot,):
+    qtbot.mouseClick(window.resetButton)
+    assert window.outputqr.toPlainText() == ""
+    qtbot.keyClicks(window.inputqr, "abc", )
+    qtbot.keyClicks(window.inputqr,Qt.Key_Enter)
+    assert window.outputqr.toPlainText() != ""
+    qtbot.mouseClick(window.resetButton)
+    assert window.outputqr.toPlainText() == ""
+
+def test_nextbutton(window,qtbot):
+    assert window.count == 1
+    qtbot.keyClicks(window.inputqr, "abc", )
+    qtbot.keyClick(window.inputqr,Qt.Key_Enter)
+    assert window.count == 2
+    qtbot.mouseClick(window.nextButton)
+    assert window.count == 1
+
+def test_offsetinput(window,qtbot):
+    assert window.offset == 1
+    qtbot.keyClicks(window.offsetinput,Qt.Key_5)
+    qtbot.keyClick(window.offsetinput,Qt.Key_Enter)
+    assert window.offset == 5
+
+def test_countinput(window,qtbot):
+    assert window.count == 1
+    qtbot.keyClick(window.countinput,Qt.Key_5)
+    qtbot.keyClick(window.countinput,Qt.Key_Enter)
+    assert window.count == 5
