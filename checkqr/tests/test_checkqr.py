@@ -55,32 +55,36 @@ def test_inputqr(window, qtbot, mocker):
     qtbot.keyClicks(window.inputqr, "abc", )
     qtbot.keyClick(window.inputqr, Qt.Key_Enter)
     assert window.outputqr.toPlainText() != ""
-    
-def test_resetbutton(window,qtbot,):
-    qtbot.mouseClick(window.resetButton)
+
+
+def test_resetbutton(window, qtbot, ):
+    qtbot.mouseClick(window.topRightGroupBox, window.resetButton)
     assert window.outputqr.toPlainText() == ""
     qtbot.keyClicks(window.inputqr, "abc", )
-    qtbot.keyClicks(window.inputqr,Qt.Key_Enter)
+    qtbot.keyClicks(window.inputqr, Qt.Key_Enter)
     assert window.outputqr.toPlainText() != ""
-    qtbot.mouseClick(window.resetButton)
+    qtbot.mouseClick(window.topRightGroupBox.resetButton)
     assert window.outputqr.toPlainText() == ""
 
-def test_nextbutton(window,qtbot):
+
+def test_nextbutton(window, qtbot):
     assert window.count == 1
     qtbot.keyClicks(window.inputqr, "abc", )
-    qtbot.keyClick(window.inputqr,Qt.Key_Enter)
+    qtbot.keyClick(window.inputqr, Qt.Key_Enter)
     assert window.count == 2
     qtbot.mouseClick(window.nextButton)
     assert window.count == 1
 
-def test_offsetinput(window,qtbot):
+
+def test_offsetinput(window, qtbot):
     assert window.offset == 1
-    qtbot.keyClicks(window.offsetinput,Qt.Key_5)
-    qtbot.keyClick(window.offsetinput,Qt.Key_Enter)
+    qtbot.keyClicks(window.offsetinput, Qt.Key_5)
+    qtbot.keyClick(window.offsetinput, Qt.Key_Enter)
     assert window.offset == 5
 
-def test_countinput(window,qtbot):
+
+def test_countinput(window, qtbot):
     assert window.count == 1
-    qtbot.keyClick(window.countinput,Qt.Key_5)
-    qtbot.keyClick(window.countinput,Qt.Key_Enter)
+    qtbot.keyClick(window.countinput, Qt.Key_5)
+    qtbot.keyClick(window.countinput, Qt.Key_Enter)
     assert window.count == 5

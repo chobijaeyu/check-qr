@@ -150,8 +150,10 @@ class checkqr(QMainWindow):
         if res[-1] == checktext:
             self.outputqr.appendPlainText(f"{self.count}番目-checked-->{res}")
             self.count += self.offset
+            self.outputqr.setStyleSheet("background-color: rgb(255, 255, 255);")
         else:
             self.outputqr.appendPlainText(f"{self.count}番目-not found-->{res}")
+            self.outputqr.setStyleSheet("background-color: rgb(255, 0, 0);")
 
     def table_area(self):
         self.bottomLeftTabWidget = QTabWidget()
